@@ -52,6 +52,7 @@ TP_BPS = 100          # sell when close is 1.0% above the entry-decision close
 TRAIL_BPS = 200       # sell when close is 2.0% below the peak close since entry
 COOLDOWN = 60         # bars to wait after an exit order before the next entry
 ENTRY_CUTOFF = 1200   # bars seen after which no NEW entry is opened
+MIN_NOTIONAL = 1_000_000  # smallest buy the replay accepts, in quote units ($1)
 MAX_SLIPPAGE_BPS = 200
 
 closes = []
@@ -115,7 +116,9 @@ def on_batch(state, batch):
     room = state.weight_room(symbol)
     if room < amount:
         amount = room
-    if amount <= 0:
+    if amount < MIN_NOTIONAL:
+        # Too little cash left for a fill the replay accepts: never send a
+        # buy the engine would reject outright (below_min_notional).
         entry_close = None
         return []
     return [{"side": "buy", "symbol": symbol, "notional_quote_units": amount,
